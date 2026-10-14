@@ -89,8 +89,8 @@ def scan_source(directory, token=''):
             if stat.S_ISLNK(mode):
                 target = os.readlink(entry)
                 try:
-                    resolved = entry.resolve().relative_to(root)
-                except (ValueError, RuntimeError):
+                    resolved = entry.resolve(strict=True).relative_to(root)
+                except (OSError, ValueError, RuntimeError):
                     raise ShareError('unsafe-tree', 'Symbolic link escapes source or forms a cycle.') from None
                 if os.path.isabs(target) or '\\' in target or ignored(str(resolved)):
                     raise ShareError('unsafe-tree', 'Symbolic link points outside publishable source.')
@@ -138,8 +138,8 @@ def _read_frozen(root, name, expected, token):
             raise ShareError('local', 'Source changed after manifest scan: ' + name)
         target = os.readlink(entry)
         try:
-            resolved = entry.resolve().relative_to(root)
-        except (ValueError, RuntimeError):
+            resolved = entry.resolve(strict=True).relative_to(root)
+        except (OSError, ValueError, RuntimeError):
             raise ShareError('unsafe-tree', 'Symbolic link escapes source or forms a cycle.') from None
         if os.path.isabs(target) or '\\' in target or ignored(str(resolved)):
             raise ShareError('unsafe-tree', 'Symbolic link points outside publishable source.')
@@ -170,8 +170,8 @@ def _verify_scanned(root, name, expected, token):
             raise ShareError('local', 'Source changed after manifest scan: ' + name)
         target = os.readlink(entry)
         try:
-            resolved = entry.resolve().relative_to(root)
-        except (ValueError, RuntimeError):
+            resolved = entry.resolve(strict=True).relative_to(root)
+        except (OSError, ValueError, RuntimeError):
             raise ShareError('unsafe-tree', 'Symbolic link escapes source or forms a cycle.') from None
         if os.path.isabs(target) or '\\' in target or ignored(str(resolved)):
             raise ShareError('unsafe-tree', 'Symbolic link points outside publishable source.')
@@ -235,8 +235,8 @@ def snapshot(directory, token='', maximum_source=MAXIMUM_SOURCE):
             if stat.S_ISLNK(mode):
                 target = os.readlink(entry)
                 try:
-                    resolved = entry.resolve().relative_to(root)
-                except (ValueError, RuntimeError):
+                    resolved = entry.resolve(strict=True).relative_to(root)
+                except (OSError, ValueError, RuntimeError):
                     raise ShareError('unsafe-tree', 'Symbolic link escapes source or forms a cycle.') from None
                 if os.path.isabs(target) or '\\' in target or ignored(str(resolved)):
                     raise ShareError('unsafe-tree', 'Symbolic link points outside publishable source.')

@@ -239,8 +239,8 @@ def retrieve(client, owner, program, destination, reference=None):
             output.symlink_to(target)
         for output, target in links:
             try:
-                output.resolve().relative_to(staging)
-            except (ValueError, RuntimeError):
+                output.resolve(strict=True).relative_to(staging)
+            except (OSError, ValueError, RuntimeError):
                 raise ShareError('unsafe-tree', 'Symbolic link escapes source tree or forms a cycle.') from None
         metadata = {'schema': 1, 'repository': repository['full_name'], 'repository_id': repository['id'],
                     'requested_reference': reference, 'commit': sha, 'destination': str(destination),

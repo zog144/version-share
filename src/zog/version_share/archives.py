@@ -87,8 +87,8 @@ def write_files(files, destination):
         path.symlink_to(target)
     for path, _ in links:
         try:
-            path.resolve().relative_to(root.resolve())
-        except (ValueError, RuntimeError):
+            path.resolve(strict=True).relative_to(root.resolve())
+        except (OSError, ValueError, RuntimeError):
             raise ShareError('unsafe-tree', 'Symbolic link escapes source tree or forms a cycle.') from None
 
 
