@@ -1,0 +1,18 @@
+{
+  "schema": 2,
+  "program": "version-share",
+  "python_package": "zog.version_share",
+  "version": "0.4.0",
+  "scripts": {
+    "version-share": "zog.version_share.__main__:main"
+  },
+  "component_dependencies": [],
+  "external_dependencies": [],
+  "package_data": [],
+  "license_notice_paths": [
+    "LICENSE",
+    "LICENSES/BSD-3-Clause.txt",
+    "LICENSES/GPL-3.0-only.txt",
+    "THIRD-PARTY-NOTICES.md"
+  ]
+}

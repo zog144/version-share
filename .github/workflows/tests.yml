@@ -1,0 +1,81 @@
+name: tests
+
+on:
+  push:
+    branches: [main, unstable]
+  pull_request:
+    branches: [main, unstable]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Python ${{ matrix.python-version }} tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Confirm public source boundary
+        run: |
+          test ! -e COPYRIGHT
+          test ! -e version-share-handoff.json
+          test ! -e publication
+          test -f LICENSE
+          test -f LICENSES/BSD-3-Clause.txt
+          test -f LICENSES/GPL-3.0-only.txt
+      - name: Install component
+        run: python -m pip install .
+      - name: Unit tests
+        run: python -m unittest discover -s tests -q
+      - name: Compile sources
+        run: python -m compileall -q src/zog/version_share bootstrap.py
+      - name: CLI entry point
+        run: version-share --help >/dev/null
+
+  package-artifacts:
+    name: Wheel and sdist audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Build artifacts
+        run: |
+          python -m pip install build
+          python -m build
+      - name: Verify namespace and licensing contents
+        run: |
+          python - <<'PY'
+          import glob, tarfile, zipfile
+          wheels = glob.glob('dist/*.whl')
+          sdists = glob.glob('dist/*.tar.gz')
+          assert len(wheels) == len(sdists) == 1
+          with zipfile.ZipFile(wheels[0]) as archive:
+              names = set(archive.namelist())
+              assert 'zog/version_share/__init__.py' in names
+              assert 'zog/__init__.py' not in names
+              assert not any(x.startswith('tests/') for x in names)
+              assert any(x.endswith('/LICENSE') for x in names)
+              entry = next(x for x in names if x.endswith('.dist-info/entry_points.txt'))
+              assert 'version-share = zog.version_share.__main__:main' in archive.read(entry).decode()
+          with tarfile.open(sdists[0], 'r:gz') as archive:
+              names = archive.getnames()
+              prefix = names[0].split('/', 1)[0]
+              files = {x[len(prefix)+1:] for x in names if x.startswith(prefix + '/')}
+              for path in ('LICENSE', 'LICENSES/BSD-3-Clause.txt',
+                           'LICENSES/GPL-3.0-only.txt', 'THIRD-PARTY-NOTICES.md',
+                           'BOOTSTRAP.md', 'bootstrap.py', 'tests/test_namespace.py',
+                           'src/zog/version_share/publication.py'):
+                  assert path in files, path
+              assert 'COPYRIGHT' not in files
+              assert 'version-share-handoff.json' not in files
+          PY

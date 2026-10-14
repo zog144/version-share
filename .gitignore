@@ -1,0 +1,12 @@
+.version-share/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+github-token.txt
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key

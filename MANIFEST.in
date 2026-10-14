@@ -1,0 +1,9 @@
+include README.md
+include BOOTSTRAP.md
+include MIGRATION.md
+include VALIDATION.md
+include bootstrap.py
+include LICENSE
+include THIRD-PARTY-NOTICES.md
+recursive-include LICENSES *.txt
+recursive-include tests *.py

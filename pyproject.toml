@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=80,<83"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "version-share"
+version = "0.4.0"
+description = "Exact source handoffs between isolated working environments"
+requires-python = ">=3.10"
+license = "BSD-3-Clause OR GPL-3.0-only"
+license-files = ["LICENSE", "LICENSES/*.txt", "THIRD-PARTY-NOTICES.md"]
+dependencies = []
+
+[project.scripts]
+version-share = "zog.version_share.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["zog.version_share*"]
+namespaces = true
