@@ -134,11 +134,18 @@ def _require_open(issue, role):
         raise ShareError('conflict', '%s issue is closed; dependency mutation requires open issues.' % role)
 
 
-def _has_dependency(client, issue, blocker_id):
-    return any(
-        dependency['id'] == blocker_id
+def _relationship_state(client, subject, blocker):
+    forward = any(
+        dependency['id'] == blocker['id']
         for dependency in _dependency_list(
-            client, issue['repository'], issue['number'], 'blocked_by'))
+            client, subject['repository'], subject['number'], 'blocked_by'))
+    reverse = any(
+        dependency['id'] == subject['id']
+        for dependency in _dependency_list(
+            client, blocker['repository'], blocker['number'], 'blocking'))
+    if forward != reverse:
+        raise ShareError('integrity', 'GitHub dependency endpoints disagree about the relationship.')
+    return forward
 
 
 def _would_cycle(client, blocker, subject_id):
@@ -168,7 +175,7 @@ def _post_read(client, subject, blocker, expect_linked, mutation_error):
         after_blocker = show_issue(client, blocker['repository'], blocker['number'])
         if after_subject['id'] != subject['id'] or after_blocker['id'] != blocker['id']:
             raise ShareError('integrity', 'Issue identity changed during dependency reconciliation.')
-        linked = _has_dependency(client, after_subject, blocker['id'])
+        linked = _relationship_state(client, after_subject, after_blocker)
     except ShareError as error:
         if mutation_error is None:
             raise ShareError(
@@ -218,7 +225,7 @@ def link_dependency(client, repository, number, blocking_repository, blocking_nu
     _require_open(blocker, 'Blocking')
     if subject['id'] == blocker['id']:
         raise ShareError('conflict', 'An issue cannot be blocked by itself.')
-    if _has_dependency(client, subject, blocker['id']):
+    if _relationship_state(client, subject, blocker):
         return _result('link', subject, blocker, False, True, False)
     if _would_cycle(client, blocker, subject['id']):
         raise ShareError('conflict', 'Dependency would create a cycle.')
@@ -245,7 +252,7 @@ def unlink_dependency(client, repository, number, blocking_repository, blocking_
     blocker = show_issue(client, blocking_repository, blocking_number)
     _require_open(subject, 'Blocked')
     _require_open(blocker, 'Blocking')
-    if not _has_dependency(client, subject, blocker['id']):
+    if not _relationship_state(client, subject, blocker):
         return _result('unlink', subject, blocker, False, False, False)
 
     error = None
