@@ -64,11 +64,10 @@ def list_issues(client, repository, state='open', limit=100):
         raise ShareError('configuration', 'Issue list limit must be between 1 and %d.' % MAXIMUM_ISSUES)
     result, page = [], 1
     while len(result) < limit:
-        remaining = min(100, limit - len(result))
         batch = client.request(
             'GET',
             _path(repository) + '/issues?state=' + quote(state, safe='') +
-            '&per_page=' + str(remaining) + '&page=' + str(page))
+            '&per_page=100&page=' + str(page))
         if not isinstance(batch, list):
             raise ShareError('remote', 'Invalid issue list response.')
         for value in batch:
@@ -77,7 +76,7 @@ def list_issues(client, repository, state='open', limit=100):
             result.append(_summary(value))
             if len(result) == limit:
                 break
-        if len(batch) < remaining:
+        if len(batch) < 100:
             break
         page += 1
     return result
