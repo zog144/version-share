@@ -89,11 +89,28 @@ endpoint. A credential cannot override the environment's network policy.
 | `release NAME VERSION` | Create or reconcile a GitHub release for an existing handoff, with source ZIP/tar links |
 | `retrieve-dependencies DIRECTORY DESTINATION` | Fetch exact dependency commits and safely reuse unchanged copies |
 | `project-index` | Resolve discovered default branches into a JSON inventory of exact commits |
+| `issues list REPOSITORY [--state open|closed|all] [--limit N]` | List repository issues (pull requests are excluded) |
+| `issues show REPOSITORY ISSUE` | Show one issue using its stable GitHub issue ID and repository identity |
+| `issues dependencies REPOSITORY ISSUE` | Inspect native GitHub `blocked_by` and `blocking` relationships |
+| `issues link REPOSITORY ISSUE BLOCKER_REPOSITORY BLOCKER_ISSUE --authorize` | Explicitly authorize and reconcile a native blocked-by relationship |
+| `issues unlink REPOSITORY ISSUE BLOCKER_REPOSITORY BLOCKER_ISSUE --authorize` | Explicitly authorize and reconcile removal of a native blocked-by relationship |
 
 `status` and `compare` report file-level changes, including executable/link-mode changes;
 use `review` for textual line diffs. See `MIGRATION.md` for the migration and release workflow. Deletions are represented by absence from the complete
 new tree. Empty source trees are permitted; inspect the deleted-file list before publishing.
 There is no implicit Git ignore support: the exclusions listed below are the complete policy.
+
+Issue repositories may be written as a bare program name (resolved under global `--owner`)
+or as explicit `OWNER/PROGRAM`, so dependency inspection and mutation can cross repositories
+and owners. Read-only issue operations never mutate GitHub. Link/unlink additionally require
+the literal `--authorize` flag (and Python callers must pass `authorized=True`). Before a
+write, version-share resolves both issues, requires them to be open, checks for duplicate
+state and rejects self/indirect cycles. It then performs one native GitHub dependency
+mutation and reads the relationship back. A lost/ambiguous mutation response is considered
+successful only when read-after observation proves the requested state; otherwise the
+operation returns an `uncertain` error and must not be blindly retried. Existing links and
+already-absent links are idempotent no-ops.
+
 
 ## Concurrent work and retry semantics
 
@@ -237,13 +254,16 @@ missing repository or insufficient token coverage. A 403 can include secondary r
 ## Access and live verification
 
 Fine-grained GitHub permissions: Administration read/write for repository creation/topics;
-Contents read/write for source and handoffs; Metadata read. Owner/repository coverage must
-include newly created repositories. Workflow-file changes may require Workflows write.
+Contents read/write for source and handoffs; Metadata read. Native issue listing/dependency
+inspection requires Issues read; dependency link/unlink requires Issues write on the affected
+repositories. Owner/repository coverage must include newly created repositories. Workflow-file
+changes may require Workflows write.
 A token cannot bypass an environment's network restrictions.
 
 See `VALIDATION.md` for performed checks, and `BOOTSTRAP.md` for fresh-chat instructions.
 API references: https://docs.github.com/en/rest/git/trees,
 https://docs.github.com/en/rest/git/commits, https://docs.github.com/en/rest/git/refs,
+https://docs.github.com/en/rest/issues/issue-dependencies,
 https://docs.github.com/en/rest/repos/repos. API version remains pinned to 2022-11-28.
 
 ## Review an exact change
