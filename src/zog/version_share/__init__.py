@@ -9,3 +9,6 @@ from .handoffs import write_handoff, create_release, retrieve_dependencies, proj
 from .transfer import retrieve_archive
 
 from .review import review
+
+from .issues import (inspect_dependencies, link_dependency, list_issues, show_issue,
+                     unlink_dependency)
