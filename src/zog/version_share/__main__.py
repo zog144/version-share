@@ -7,6 +7,12 @@ from .archives import preview_zip, import_zip
 from .handoffs import write_handoff, create_release, retrieve_dependencies, project_index
 from .transfer import retrieve_archive
 from .review import review
+from .issues import (inspect_dependencies, link_dependency, list_issues, show_issue,
+                     unlink_dependency)
+
+def _issue_repository(owner, value):
+    return value if '/' in value else owner + '/' + value
+
 
 EXIT_CODES = {'configuration': 2, 'authentication': 3, 'forbidden': 4, 'not-found': 5,
               'network': 6, 'rate-limit': 7, 'conflict': 8, 'unsupported': 9,
@@ -73,6 +79,25 @@ def main(argv=None):
     dependencies.add_argument('directory')
     dependencies.add_argument('destination')
     commands.add_parser('project-index')
+    issue_group = commands.add_parser('issues')
+    issue_commands = issue_group.add_subparsers(dest='issue_command', required=True)
+    issue_list = issue_commands.add_parser('list')
+    issue_list.add_argument('repository')
+    issue_list.add_argument('--state', choices=('open', 'closed', 'all'), default='open')
+    issue_list.add_argument('--limit', type=int, default=100)
+    issue_show = issue_commands.add_parser('show')
+    issue_show.add_argument('repository')
+    issue_show.add_argument('issue_number', type=int)
+    issue_dependencies = issue_commands.add_parser('dependencies')
+    issue_dependencies.add_argument('repository')
+    issue_dependencies.add_argument('issue_number', type=int)
+    for operation in ('link', 'unlink'):
+        mutation = issue_commands.add_parser(operation)
+        mutation.add_argument('repository')
+        mutation.add_argument('issue_number', type=int)
+        mutation.add_argument('blocking_repository')
+        mutation.add_argument('blocking_issue_number', type=int)
+        mutation.add_argument('--authorize', action='store_true')
     args = parser.parse_args(argv)
     client = None
     try:
@@ -115,6 +140,19 @@ def main(argv=None):
             result = create_release(client, args.owner, args.program, args.version)
         elif args.command == 'retrieve-dependencies':
             result = retrieve_dependencies(client, args.directory, args.destination)
+        elif args.command == 'issues':
+            repository = _issue_repository(args.owner, args.repository)
+            if args.issue_command == 'list':
+                result = list_issues(client, repository, args.state, args.limit)
+            elif args.issue_command == 'show':
+                result = show_issue(client, repository, args.issue_number)
+            elif args.issue_command == 'dependencies':
+                result = inspect_dependencies(client, repository, args.issue_number)
+            else:
+                blocking_repository = _issue_repository(args.owner, args.blocking_repository)
+                operation = link_dependency if args.issue_command == 'link' else unlink_dependency
+                result = operation(client, repository, args.issue_number, blocking_repository,
+                                   args.blocking_issue_number, authorized=args.authorize)
         else:
             result = project_index(client, args.owner)
         output, exit_status = {'ok': True, 'result': result}, 0
